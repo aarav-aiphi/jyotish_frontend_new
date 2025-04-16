@@ -155,6 +155,8 @@ export default function ChatUI({ socket, selectedChatId, user }: ChatUIProps) {
   useEffect(() => {
     if (!socket) return;
 
+    console.log("Setting up newMessage listener for chat ID:", selectedChatId);
+
     const handleNewMessage = ({
       chatId,
       message,
@@ -162,7 +164,10 @@ export default function ChatUI({ socket, selectedChatId, user }: ChatUIProps) {
       chatId: string;
       message: ChatMessageType;
     }) => {
+      console.log("Received new message:", { chatId, messageContent: message.content });
+      
       if (chatId === selectedChatId) {
+        console.log("Adding message to chat:", message);
         setMessages((prev) => [...prev, message]);
 
         // Show browser notification if not sent by current user
@@ -174,6 +179,8 @@ export default function ChatUI({ socket, selectedChatId, user }: ChatUIProps) {
             });
           }
         }
+      } else {
+        console.log("Message was for a different chat:", chatId);
       }
     };
 
@@ -181,6 +188,7 @@ export default function ChatUI({ socket, selectedChatId, user }: ChatUIProps) {
 
     // Cleanup
     return () => {
+      console.log("Removing newMessage listener");
       socket.off("newMessage", handleNewMessage);
     };
   }, [socket, selectedChatId, user]);
@@ -314,14 +322,24 @@ export default function ChatUI({ socket, selectedChatId, user }: ChatUIProps) {
         replyTo: replyTo?._id || null
       };
 
+      console.log('Attempting to send message:', messageData);
+      
       socket.emit("sendMessage", messageData, (response: SocketResponse) => {
+        console.log('Message send response:', response);
         if (response?.success) {
           console.log("Message sent successfully");
+        } else {
+          console.error("Failed to send message:", response?.message || 'Unknown error');
         }
       });
 
       setCurrentMessage("");
       setReplyTo(null);
+    } else {
+      console.error('Cannot send message: socket or selectedChatId is missing', { 
+        socketConnected: !!socket, 
+        selectedChatId 
+      });
     }
   };
 
@@ -400,71 +418,133 @@ export default function ChatUI({ socket, selectedChatId, user }: ChatUIProps) {
   return (
     <>
       {/* MESSAGES */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {groupedMessages.map((item, index) => {
-          if (isDivider(item)) {
-            return (
-              <div key={`divider-${index}-${Date.now()}`} className="text-center text-gray-500 text-sm my-4">
-                {item.label}
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="p-4 md:p-6 space-y-4 max-w-3xl mx-auto">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500 space-y-4">
+              <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
               </div>
-            );
-          }
+              <p className="text-center text-sm">Start the conversation by sending a message below</p>
+            </div>
+          ) : (
+            groupedMessages.map((item, index) => {
+              if (isDivider(item)) {
+                return (
+                  <div key={`divider-${index}-${Date.now()}`} className="flex items-center justify-center my-6">
+                    <div className="bg-gray-300 dark:bg-gray-700 h-px flex-grow"></div>
+                    <span className="mx-4 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-full shadow-sm">
+                      {item.label}
+                    </span>
+                    <div className="bg-gray-300 dark:bg-gray-700 h-px flex-grow"></div>
+                  </div>
+                );
+              }
 
-          return (
-            <ChatMessage
-              key={`${item._id}-${item.createdAt}`}
-              message={item}
-              currentUserId={user._id}
-              onReply={handleReply}
-              onEdit={handleEditMessage}
-              onDelete={handleDeleteMessage}
-              onReact={reactToMessage}
-            />
-          );
-        })}
-        {isTyping && <div className="text-sm text-gray-500 mx-14">Typing...</div>}
-        {summary && (
-          <div className="p-4 bg-yellow-100 rounded">
-            <h3 className="font-bold">Chat Summary:</h3>
-            <p>{summary}</p>
-          </div>
-        )}
-        <div ref={endOfMessagesRef} />
+              return (
+                <ChatMessage
+                  key={`${item._id}-${item.createdAt}`}
+                  message={item}
+                  currentUserId={user._id}
+                  onReply={handleReply}
+                  onEdit={handleEditMessage}
+                  onDelete={handleDeleteMessage}
+                  onReact={reactToMessage}
+                />
+              );
+            })
+          )}
+          
+          {isTyping && (
+            <div className="flex items-center space-x-2 pl-12 text-gray-500 animate-pulse">
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <circle cx="4" cy="12" r="3" fill="currentColor">
+                  <animate attributeName="opacity" from="1" to="0.3" dur="0.8s" repeatCount="indefinite" begin="0" />
+                </circle>
+                <circle cx="12" cy="12" r="3" fill="currentColor">
+                  <animate attributeName="opacity" from="1" to="0.3" dur="0.8s" repeatCount="indefinite" begin="0.2s" />
+                </circle>
+                <circle cx="20" cy="12" r="3" fill="currentColor">
+                  <animate attributeName="opacity" from="1" to="0.3" dur="0.8s" repeatCount="indefinite" begin="0.4s" />
+                </circle>
+              </svg>
+              <span className="text-sm font-medium">Typing</span>
+            </div>
+          )}
+          
+          {summary && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg shadow-sm">
+              <div className="flex items-center mb-2">
+                <svg className="w-5 h-5 mr-2 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="font-semibold text-amber-800 dark:text-amber-300">Chat Summary</h3>
+              </div>
+              <p className="text-amber-700 dark:text-amber-200 text-sm">{summary}</p>
+            </div>
+          )}
+          
+          <div ref={endOfMessagesRef} />
+        </div>
       </div>
 
       {/* INPUT */}
-      <div className="p-4 flex border-t flex-col">
-        {replyTo && (
-          <div className="p-2 bg-gray-100 rounded mb-2 flex justify-between items-center">
-            <span>
-              Replying to: <strong>{replyTo.content}</strong>
-            </span>
-            <button onClick={() => setReplyTo(null)} className="text-red-500">
-              Cancel
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        <div className="max-w-3xl mx-auto">
+          {replyTo && (
+            <div className="mb-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border-l-4 border-blue-500 dark:border-blue-400 flex items-start justify-between">
+              <div className="flex-1 pr-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Replying to <span className="font-semibold">{replyTo.sender.name}</span>
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 truncate">{replyTo.content}</p>
+              </div>
+              <button 
+                onClick={() => setReplyTo(null)}
+                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+          
+          <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-2">
+            <button className="text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 mr-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+            <input
+              className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 py-2 text-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              type="text"
+              placeholder="Type a message..."
+              value={currentMessage}
+              onChange={handleTyping}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            />
+            <button
+              onClick={requestSummary}
+              className="text-gray-500 dark:text-gray-400 hover:text-amber-500 dark:hover:text-amber-400 ml-2"
+              title="Generate summary"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </button>
+            <button
+              onClick={sendMessage}
+              className="ml-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 flex items-center justify-center transition-colors"
+              disabled={!currentMessage.trim()}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
             </button>
           </div>
-        )}
-        <div className="flex">
-          <input
-            className="flex-1 border p-2 rounded-lg"
-            type="text"
-            placeholder="Type a message..."
-            value={currentMessage}
-            onChange={handleTyping}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          />
-          <button
-            onClick={sendMessage}
-            className="ml-2 bg-black px-4 rounded-lg text-white hover:bg-gray-900"
-          >
-            Send
-          </button>
-          <button
-            onClick={requestSummary}
-            className="ml-2 bg-black px-4 rounded-lg text-white hover:bg-gray-900"
-          >
-            Summary
-          </button>
         </div>
       </div>
     </>

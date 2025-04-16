@@ -57,7 +57,7 @@ export default function CallUI({
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const peerRef = useRef<Peer.Instance | null>(null);
 
-    // Track the local media stream we’re using
+    // Track the local media stream we're using
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
     // Toggles
@@ -171,12 +171,17 @@ export default function CallUI({
             setLocalStream(stream);
 
             if (myVideoRef.current) {
+                console.log("Setting local video source:", stream.id);
                 myVideoRef.current.srcObject = stream;
-                myVideoRef.current.play().catch(err => console.error(err));
-
+                myVideoRef.current.play()
+                    .then(() => console.log("Local video started playing"))
+                    .catch(err => {
+                        console.error("Error playing local video:", err);
+                        // We don't need user interaction for local video (muted videos can autoplay)
+                    });
+            } else {
+                console.warn("Local video ref is null");
             }
-
-
 
             // Create peer
             const peer = new Peer({
@@ -187,8 +192,20 @@ export default function CallUI({
                     iceServers: [
                         { urls: "stun:stun1.l.google.com:19302" },
                         { urls: "stun:stun2.l.google.com:19302" },
-                        // Add TURN if needed
+                        { urls: "stun:stun3.l.google.com:19302" },
+                        { urls: "stun:stun4.l.google.com:19302" },
+                        { 
+                            urls: 'turn:openrelay.metered.ca:80',
+                            username: 'openrelayproject',
+                            credential: 'openrelayproject'
+                        },
+                        {
+                            urls: 'turn:openrelay.metered.ca:443',
+                            username: 'openrelayproject',
+                            credential: 'openrelayproject'
+                        }
                     ],
+                    iceCandidatePoolSize: 10,
                 },
             });
 
@@ -202,19 +219,55 @@ export default function CallUI({
                 });
             });
 
-            // Called when remote peer’s stream arrives
+            // Called when remote peer's stream arrives
             peer.on("stream", (remoteStream) => {
+                console.log("Received remote stream:", remoteStream.id);
                 if (remoteVideoRef.current) {
+                    console.log("Setting remote video source");
                     remoteVideoRef.current.srcObject = remoteStream;
+                    
+                    // Force video to play with promise handling
+                    remoteVideoRef.current.play()
+                        .then(() => console.log("Remote video playing successfully"))
+                        .catch(err => {
+                            console.error("Error playing remote video:", err);
+                            // Try again with user interaction
+                            const playButton = document.createElement("button");
+                            playButton.textContent = "Play Video";
+                            playButton.onclick = () => {
+                                remoteVideoRef.current?.play();
+                                playButton.remove();
+                            };
+                            document.body.appendChild(playButton);
+                        });
+                } else {
+                    console.warn("Remote video ref is null");
                 }
             });
 
             // Optional debug
             peer.on("connect", () => {
-                console.log("Peer connected!");
+                console.log("Peer connected successfully!");
+                setIsCallActive(true);
             });
+            
             peer.on("error", (err) => {
                 console.error("Peer error (caller):", err);
+                alert(`Call error: ${err.message}`);
+                endCall(false);
+            });
+
+            peer.on("close", () => {
+                console.log("Peer connection closed");
+                endCall(false);
+            });
+
+            peer.on("iceStateChange", (state) => {
+                console.log("ICE state changed to:", state);
+                if (state === "disconnected" || state === "failed" || state === "closed") {
+                    console.error("ICE connection failed");
+                    endCall(false);
+                }
             });
 
             peerRef.current = peer;
@@ -262,7 +315,7 @@ export default function CallUI({
                 }
 
             } else {
-                // For audio‐only call, just get audio
+                // For audio-only call, just get audio
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             }
 
@@ -270,20 +323,44 @@ export default function CallUI({
 
             // Attach your local stream to a <video> if needed (for self preview)
             if (myVideoRef.current) {
-                console.log(myVideoRef);
+                console.log("Callee setting local video source:", stream.id);
                 myVideoRef.current.srcObject = stream;
-                myVideoRef.current.play().catch(err => console.error(err));
-
+                myVideoRef.current.play()
+                    .then(() => console.log("Callee: Local video started playing"))
+                    .catch(err => {
+                        console.error("Callee: Error playing local video:", err);
+                        // We don't need user interaction for local video (muted videos can autoplay)
+                    });
+            } else {
+                console.warn("Callee: Local video ref is null");
             }
 
 
 
-            // 3) Create the peer in “callee” mode
+            // 3) Create the peer in "callee" mode
             const peer = new Peer({
                 initiator: false,
                 trickle: false,
                 stream,
-                config: { /* your TURN/STUN config */ },
+                config: {
+                    iceServers: [
+                        { urls: "stun:stun1.l.google.com:19302" },
+                        { urls: "stun:stun2.l.google.com:19302" },
+                        { urls: "stun:stun3.l.google.com:19302" },
+                        { urls: "stun:stun4.l.google.com:19302" },
+                        { 
+                            urls: 'turn:openrelay.metered.ca:80',
+                            username: 'openrelayproject',
+                            credential: 'openrelayproject'
+                        },
+                        {
+                            urls: 'turn:openrelay.metered.ca:443',
+                            username: 'openrelayproject',
+                            credential: 'openrelayproject'
+                        }
+                    ],
+                    iceCandidatePoolSize: 10,
+                },
             });
 
             peer.on("signal", (data) => {
@@ -294,16 +371,55 @@ export default function CallUI({
             });
 
             peer.on("stream", (remoteStream) => {
+                console.log("Callee received remote stream:", remoteStream.id);
                 if (remoteVideoRef.current) {
+                    console.log("Callee setting remote video source");
                     remoteVideoRef.current.srcObject = remoteStream;
+                    
+                    // Force video to play with promise handling
+                    remoteVideoRef.current.play()
+                        .then(() => console.log("Callee: Remote video playing successfully"))
+                        .catch(err => {
+                            console.error("Callee: Error playing remote video:", err);
+                            // Try again with user interaction
+                            const playButton = document.createElement("button");
+                            playButton.textContent = "Play Video";
+                            playButton.onclick = () => {
+                                remoteVideoRef.current?.play();
+                                playButton.remove();
+                            };
+                            document.body.appendChild(playButton);
+                        });
+                } else {
+                    console.warn("Callee: Remote video ref is null");
                 }
             });
 
             peer.on("error", (err) => {
                 console.error("Callee peer error:", err);
+                alert(`Call error: ${err.message}`);
+                endCall(false);
             });
 
-            // 4) Use the caller’s signal to complete handshake
+            peer.on("connect", () => {
+                console.log("Callee peer connected successfully!");
+                setIsCallActive(true);
+            });
+
+            peer.on("close", () => {
+                console.log("Callee peer connection closed");
+                endCall(false);
+            });
+
+            peer.on("iceStateChange", (state) => {
+                console.log("Callee ICE state changed to:", state);
+                if (state === "disconnected" || state === "failed" || state === "closed") {
+                    console.error("Callee ICE connection failed");
+                    endCall(false);
+                }
+            });
+
+            // 4) Use the caller's signal to complete handshake
             peer.signal(signalData);
 
             peerRef.current = peer;
@@ -491,7 +607,7 @@ export default function CallUI({
 
             {/* ========== Active Call UI ========== */}
             {isCallActive && (
-                <div className="fixed bottom-4 right-4 bg-white p-3 shadow-lg border flex flex-col items-center z-50 rounded w-72">
+                <div className="fixed bottom-4 right-4 bg-white p-3 shadow-lg border flex flex-col items-center z-50 rounded w-96">
                     <div className="flex w-full justify-center space-x-2 mb-2">
                         {/* Local video */}
                         {callType === "video" && (
@@ -500,10 +616,11 @@ export default function CallUI({
                                 autoPlay
                                 muted
                                 playsInline
-                                className="w-32 h-24 bg-black"
+                                className="w-40 h-32 bg-black rounded-lg"
+                                onPlay={() => console.log("Local video started playing")}
+                                onLoadedMetadata={() => console.log("Local video metadata loaded")}
+                                onError={(e) => console.error("Local video error:", e)}
                             />
-
-
                         )}
 
                         {/* Remote video */}
@@ -511,7 +628,11 @@ export default function CallUI({
                             <video
                                 ref={remoteVideoRef}
                                 autoPlay
-                                className="w-32 h-24 bg-black"
+                                playsInline
+                                className="w-40 h-32 bg-black rounded-lg"
+                                onPlay={() => console.log("Remote video started playing")}
+                                onLoadedMetadata={() => console.log("Remote video metadata loaded")}
+                                onError={(e) => console.error("Remote video error:", e)}
                             />
                         )}
                     </div>
