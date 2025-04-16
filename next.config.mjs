@@ -22,7 +22,7 @@ const nextConfig = {
     return [
       {
         source: '/api/v1/:path*', 
-        destination: 'http://localhost:7000/api/v1/:path*', 
+        destination: 'https://nextjsweb-b3cqh4e7ajetdeax.canadacentral-01.azurewebsites.net/api/v1/:path*', 
       },
     ];
   },  

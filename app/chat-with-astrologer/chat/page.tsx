@@ -54,7 +54,7 @@ const ChatContent = () => {
 
   useEffect(() => {
     // const token = getCookie('token'); 
-    const newSocket = io('http://localhost:7000', {
+    const newSocket = io('https://nextjsweb-b3cqh4e7ajetdeax.canadacentral-01.azurewebsites.net', {
       auth: { token: store.getState().user.token },
       transports: ['websocket']
     });

@@ -67,7 +67,7 @@ The frontend application of JyotishConnect provides a rich user experience throu
    Create a `.env.local` file in the project root with the following variables (adjust as needed):
 
    ```env
-   NEXT_PUBLIC_API_BASE_URL=http://localhost:7000/api/v1
+   NEXT_PUBLIC_API_BASE_URL=https://nextjsweb-b3cqh4e7ajetdeax.canadacentral-01.azurewebsites.net/api/v1
    NEXT_PUBLIC_SOCKET_URL=https://jyotishconnect.onrender.com
    ```
 

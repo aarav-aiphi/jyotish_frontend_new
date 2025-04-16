@@ -45,7 +45,7 @@ const ReviewsContent = ({ astrologerId }: ReviewsContentProps) => {
     try {
       setLoading(true);
       const response = await axios.get<ReviewsResponse>(
-        `http://localhost:7000/api/v1/reviews/astrologer/${astrologerId}`,
+        `https://nextjsweb-b3cqh4e7ajetdeax.canadacentral-01.azurewebsites.net/api/v1/reviews/astrologer/${astrologerId}`,
         { params: { page: currentPage, sort: sortBy } }
       );
       if (currentPage === 1) {
@@ -84,7 +84,7 @@ const ReviewsContent = ({ astrologerId }: ReviewsContentProps) => {
     e.preventDefault();
     setSubmittingReview(true);
     try {
-      const response = await axios.post("http://localhost:7000/api/v1/reviews/create", {
+      const response = await axios.post("https://nextjsweb-b3cqh4e7ajetdeax.canadacentral-01.azurewebsites.net/api/v1/reviews/create", {
         astrologerId,
         rating: newReviewRating,
         comment: newReviewComment,
