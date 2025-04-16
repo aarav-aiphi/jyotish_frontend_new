@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import * as motion from 'framer-motion/client';
 import { BackgroundBeams } from '@/components2/ui/background-beams';
 import { ParallaxText } from '@/components2/ui/parallax-text';
@@ -39,7 +39,7 @@ export default function HoroscopePage() {
   const [southChartData, setSouthChartData] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('north');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     location: '',
     time: '',
@@ -47,12 +47,12 @@ export default function HoroscopePage() {
     timezone: '',
   });
 
-  const handleInputChange = (e:any) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prevState => ({ ...prevState, [name]: value }));
   };
 
-  const fetchChartData = async (e:any) => {
+  const fetchChartData = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -79,8 +79,8 @@ export default function HoroscopePage() {
       
       setChartData(northSvgText);
       setSouthChartData(southSvgText);
-    } catch (err:any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       setChartData(null);
       setSouthChartData(null);
     } finally {

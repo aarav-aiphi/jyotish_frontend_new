@@ -46,24 +46,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     return isSentByUser && diffMinutes <= 10;
   };
 
-  const renderReactions = () => {
-    if (!message.reactions || Object.keys(message.reactions).length === 0) return null;
-
-    return (
-      <div className="flex flex-wrap gap-1 mt-1">
-        {Object.entries(message.reactions).map(([userId, emoji]) => (
-          <span
-            key={`${userId}-${emoji}`}
-            className="bg-gray-100 rounded-full px-2 py-0.5 text-sm"
-            title={userId === currentUserId ? "You reacted" : "User reaction"}
-          >
-            {emoji}
-          </span>
-        ))}
-      </div>
-    );
-  };
-
   // ================ Action Handlers ================
 
   return (

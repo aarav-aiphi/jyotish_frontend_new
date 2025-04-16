@@ -1,6 +1,6 @@
 'use client'
 import * as motion from "framer-motion/client"
-import { AnimatePresence } from "framer-motion/client"
+import { AnimatePresence } from "framer-motion"
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { FaStar, FaPhoneAlt, FaUserCheck } from 'react-icons/fa'

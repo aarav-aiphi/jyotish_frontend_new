@@ -1,5 +1,4 @@
 import { Header } from '@/components/header'
-import { HeroSection } from '@/components/sections/hero'
 import { ServicesSection } from '@/components/sections/services'
 import { TestimonialsSection } from '@/components/sections/testimonials'
 import { AstrologersSection } from '@/components/sections/astrologers'
