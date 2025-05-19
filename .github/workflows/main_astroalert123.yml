@@ -58,7 +58,7 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'astroalert123'
+          app-name: 'astro-alert-webapp-bsfcbmhtgcachgbj'
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_0089CD1DC2C7439B9D4742411AFC3397 }}
